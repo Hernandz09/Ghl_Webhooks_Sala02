@@ -1,0 +1,139 @@
+import os
+import requests
+from django.utils.dateparse import parse_datetime
+from django.utils import timezone
+from django.conf import settings
+from .models import Appointment
+from dotenv import load_dotenv
+
+# Configuración desde .env
+load_dotenv()
+
+GHL_BASE_URL = "https://services.leadconnectorhq.com"
+GHL_API_VERSION = os.getenv("GHL_API_VERSION", "2021-04-15")
+ACCESS_TOKEN = os.getenv("GHL_ACCESS_TOKEN")
+GHL_LOCATION_ID = os.getenv("GHL_LOCATION_ID")
+
+if not ACCESS_TOKEN:
+    raise Exception("GHL_ACCESS_TOKEN no configurado en .env")
+if not GHL_LOCATION_ID:
+    raise Exception("GHL_LOCATION_ID no configurado en .env")
+
+
+def _to_datetime(iso_str):
+    """Convierte ISO8601 string a datetime aware o devuelve None."""
+    if not iso_str:
+        return None
+    dt = parse_datetime(iso_str)
+    if dt is None:
+        return None
+    if settings.USE_TZ and timezone.is_naive(dt):
+        tz = timezone.get_current_timezone()
+        dt = timezone.make_aware(dt, tz)
+    return dt
+
+
+def create_appointment(data):
+    """Crear una cita en GHL y sincronizar en la BD local."""
+    location_id = data.get("locationId") or GHL_LOCATION_ID
+    if not location_id:
+        raise Exception("No se encontró locationId ni en payload ni en .env")
+
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Version": GHL_API_VERSION,
+        "Content-Type": "application/json",
+        "LocationId": location_id
+    }
+
+    api_payload = {
+        "calendarId": data["calendarId"],
+        "locationId": location_id,
+        "contactId": data["contactId"],
+        "startTime": data["startTime"],
+        "endTime": data["endTime"],
+        "title": data.get("title", "Cita creada desde API"),
+        "appointmentStatus": data.get("appointmentStatus", "confirmed"),
+        "assignedUserId": data.get("assignedUserId"),
+        "ignoreFreeSlotValidation": True,
+        "toNotify": True
+    }
+
+    resp = requests.post(f"{GHL_BASE_URL}/calendars/events/appointments",
+                         json=api_payload, headers=headers, timeout=15)
+    resp.raise_for_status()
+    ghl_data = resp.json()
+
+    start_dt = _to_datetime(ghl_data.get("startTime") or api_payload["startTime"])
+    end_dt = _to_datetime(ghl_data.get("endTime") or api_payload["endTime"])
+
+    final_location_id = ghl_data.get("locationId") or location_id
+    if not final_location_id:
+        raise Exception("La respuesta de GHL no incluyó locationId")
+
+    appointment, _ = Appointment.objects.update_or_create(
+        ghl_id=ghl_data.get("id"),
+        defaults={
+            "location_id": final_location_id,
+            "calendar_id": ghl_data.get("calendarId") or api_payload["calendarId"],
+            "contact_id": ghl_data.get("contactId") or api_payload["contactId"],
+            "title": ghl_data.get("title") or api_payload.get("title"),
+            "appointment_status": ghl_data.get("appointmentStatus") or api_payload.get("appointmentStatus"),
+            "assigned_user_id": ghl_data.get("assignedUserId"),
+            "notes": ghl_data.get("notes"),
+            "start_time": start_dt,
+            "end_time": end_dt,
+            "source": ghl_data.get("source")
+        }
+    )
+    return appointment
+
+
+def update_appointment(appointment_id, payload):
+    """Actualizar cita en GHL y sincronizar BD local."""
+    appointment = Appointment.objects.filter(ghl_id=appointment_id).first()
+    location_id = appointment.location_id if appointment else GHL_LOCATION_ID
+
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Version": GHL_API_VERSION,
+        "Content-Type": "application/json",
+        "LocationId": location_id
+    }
+
+    url = f"{GHL_BASE_URL}/calendars/events/appointments/{appointment_id}"
+    resp = requests.put(url, headers=headers, json=payload, timeout=15)
+    resp.raise_for_status()
+    data = resp.json()
+
+    Appointment.objects.filter(ghl_id=appointment_id).update(
+        title=data.get("title"),
+        appointment_status=data.get("appointmentStatus"),
+        assigned_user_id=data.get("assignedUserId"),
+        notes=data.get("notes"),
+        start_time=_to_datetime(data.get("startTime")),
+        end_time=_to_datetime(data.get("endTime")),
+    )
+    return data
+
+
+def delete_appointment(appointment_id):
+    """Cancelar cita en GHL y en BD local."""
+    appointment = Appointment.objects.filter(ghl_id=appointment_id).first()
+    location_id = appointment.location_id if appointment else GHL_LOCATION_ID
+
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Version": GHL_API_VERSION,
+        "Content-Type": "application/json",
+        "LocationId": location_id
+    }
+
+    url = f"{GHL_BASE_URL}/calendars/events/appointments/{appointment_id}"
+    payload = {"appointmentStatus": "cancelled"}
+
+    resp = requests.put(url, headers=headers, json=payload, timeout=15)
+    resp.raise_for_status()
+
+    Appointment.objects.filter(ghl_id=appointment_id).update(appointment_status="cancelled")
+    return {"message": "Cita cancelada correctamente"}
