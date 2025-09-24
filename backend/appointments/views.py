@@ -1,3 +1,5 @@
+# appointments/views.py
+# Vistas para la gestión de citas - GHL Sala 02
 import os
 import json
 import requests
@@ -15,7 +17,7 @@ from django.conf import settings
 from rest_framework.generics import ListAPIView
 
 
-# Cargar .env
+# Cargar variables de entorno
 load_dotenv()
 
 # Constantes GHL

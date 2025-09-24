@@ -1,3 +1,5 @@
+# appointments/admin.py
+# Configuración del admin para el modelo Appointment - GHL Sala 02
 from django.contrib import admin
 from django.utils import timezone
 from django.conf import settings
