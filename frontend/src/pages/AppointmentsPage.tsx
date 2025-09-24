@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Appointment, cancelAppointment, fetchAppointments } from '../api/client'
+import StatusBadge from '../components/StatusBadge'
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
@@ -55,13 +56,17 @@ export default function AppointmentsPage() {
               {appointments.map(a => (
                 <tr key={a.ghl_id}>
                   <td>{a.title}</td>
-                  <td>{a.appointment_status}</td>
+                  <td>
+                    <StatusBadge status={a.appointment_status} />
+                  </td>
                   <td>{new Date(a.start_time).toLocaleString()}</td>
                   <td>{new Date(a.end_time).toLocaleString()}</td>
                   <td>
                     <div className="grid-actions">
                       <Link to={`/appointments/${a.ghl_id}/edit`} className="btn">Editar</Link>
-                      <button className="btn btn-danger" onClick={() => handleCancel(a.ghl_id)}>Cancelar</button>
+                      {a.appointment_status !== 'cancelled' && (
+                        <button className="btn btn-danger" onClick={() => handleCancel(a.ghl_id)}>Cancelar</button>
+                      )}
                     </div>
                   </td>
                 </tr>

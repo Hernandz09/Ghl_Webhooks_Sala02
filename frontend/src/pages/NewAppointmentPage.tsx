@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react'
 import { createAppointment } from '../api/client'
 import { useNavigate } from 'react-router-dom'
+import StatusBadge from '../components/StatusBadge'
 
 export default function NewAppointmentPage() {
   const navigate = useNavigate()
@@ -13,6 +14,7 @@ export default function NewAppointmentPage() {
     locationId: '',
     title: 'Cita creada desde Frontend',
     assignedUserId: '',
+    appointmentStatus: 'confirmed',
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,6 +38,7 @@ export default function NewAppointmentPage() {
         locationId: form.locationId || undefined,
         title: form.title,
         assignedUserId: form.assignedUserId || undefined,
+        appointmentStatus: form.appointmentStatus,
       }
       await createAppointment(payload)
       navigate('/appointments')
@@ -88,6 +91,16 @@ export default function NewAppointmentPage() {
           <div className="field">
             <label className="label">Título</label>
             <input className="input" value={form.title} onChange={e => set('title', e.target.value)} />
+          </div>
+          <div className="field">
+            <label className="label">Estado</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <select className="select" value={form.appointmentStatus} onChange={e => set('appointmentStatus', e.target.value)}>
+                <option value="confirmed">Confirmada</option>
+                <option value="cancelled">Cancelada</option>
+              </select>
+              <StatusBadge status={form.appointmentStatus} />
+            </div>
           </div>
           <div className="form-actions">
             <button className="btn btn-primary" type="submit" disabled={submitting}>{submitting ? 'Creando...' : 'Crear'}</button>

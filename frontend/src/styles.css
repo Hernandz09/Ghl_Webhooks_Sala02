@@ -39,6 +39,12 @@ body{margin:0;background:linear-gradient(180deg, #0b1022, var(--bg));color:var(-
 .btn-primary{border-color:transparent;background:linear-gradient(180deg,var(--primary),var(--primary-600));color:#05202b;font-weight:600}
 .btn-primary:hover{filter:brightness(.95)}
 .btn-danger{border-color:#7f1d1d;background:linear-gradient(180deg,#f87171,#ef4444);color:#2a0606}
+.btn-success{border-color:#14532d;background:linear-gradient(180deg,#4ade80,#10b981);color:#052e16}
+
+/* Status badges - non-clickable status indicators */
+.status-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.status-badge.confirmed{border:1px solid #14532d;background:linear-gradient(180deg,#4ade80,#10b981);color:#052e16}
+.status-badge.cancelled{border:1px solid #7f1d1d;background:linear-gradient(180deg,#f87171,#ef4444);color:#2a0606}
 
 .table{width:100%;border-collapse:separate;border-spacing:0}
 .table th,.table td{padding:12px 10px;border-bottom:1px solid var(--border);text-align:left}
