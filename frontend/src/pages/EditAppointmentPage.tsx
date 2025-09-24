@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { updateAppointment, fetchAppointments } from '../api/client'
 import { useNavigate, useParams } from 'react-router-dom'
+import StatusBadge from '../components/StatusBadge'
 
 export default function EditAppointmentPage() {
   const navigate = useNavigate()
@@ -102,11 +103,13 @@ export default function EditAppointmentPage() {
           </div>
           <div className="field">
             <label className="label">Estado</label>
-            <select className="select" value={form.appointmentStatus} onChange={e => set('appointmentStatus', e.target.value)}>
-              <option value="confirmed">confirmed</option>
-              <option value="cancelled">cancelled</option>
-              <option value="rescheduled">rescheduled</option>
-            </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <select className="select" value={form.appointmentStatus} onChange={e => set('appointmentStatus', e.target.value)}>
+                <option value="confirmed">Confirmada</option>
+                <option value="cancelled">Cancelada</option>
+              </select>
+              <StatusBadge status={form.appointmentStatus} />
+            </div>
           </div>
           <div className="field">
             <label className="label">assignedUserId</label>
