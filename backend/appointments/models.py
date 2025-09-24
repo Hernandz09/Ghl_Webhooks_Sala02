@@ -1,4 +1,5 @@
 # appointments/models.py
+# Modelo para gestionar las citas del sistema GHL Sala 02
 from django.db import models
 
 class Appointment(models.Model):
